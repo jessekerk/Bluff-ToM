@@ -1,137 +1,118 @@
-from __future__ import annotations
-
-# TODO; Implement play logic, implement 0, 1, and 2 order ToM players.
 import random
 
-CardsType = list[tuple[str, str]]
-
-VALID_SUITS = ["Hearts", "Diamonds", "Clubs", "Spades"]
-VALID_VALUES = ["Jack", "Queen", "King", "Ace"]
-
-
-class Card:
-    def __init__(self, value: str, suit: str) -> None:
-        if suit not in VALID_SUITS:
-            raise ValueError(f"Invalid suit: {suit}")
-        if value not in VALID_VALUES:
-            raise ValueError(f"Invalid value: {value}")
-        self.suit = suit
-        self.value = value
-
-    def __str__(self):
-        return f"{self.value} of {self.suit}!"
-
-    def __repr__(self) -> str:
-        return f"Card({self.value!r}, {self.suit})"
-
-
-card = Card("Ace", "Spades")
-print(card)
-
-
-class BluffBid:
-    def __init__(self, cards: CardsType):
-        self.cards = cards
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, BluffBid):
-            return NotImplemented
-        return self.cards == other.cards
-
-
 class BluffPlayer:
-    def start_game(self, identifier: int, player_count: int, cards: CardsType):
-        """Player receives its ID, number of players, and its initial hand."""
+    def start_game(self, identifier: int, cards: tuple[str]):
         pass
 
-    def take_turn(self, current_bid: BluffBid | None) -> BluffBid | None:
-        """Return a new bid or None to challenge."""
+    def take_turn(self, cards: tuple[str], player_count: int, previous_play: int, current_rank: str) -> list[str]|None:
+        return None
+
+    def observe_bid(self, cards: tuple[str], player_count: int, challenge_amount_of_cards: int, current_rank: str, bidder_id: int) -> None:
         pass
 
-    def observe_bid(self, bid: BluffBid, player: int) -> None:
-        """Update beliefs given another player's bid."""
-        pass
-
-    def observe_challenge(
-        self,
-        bid: BluffBid,
-        challenger: int,
-        success: bool,
-        revealed_cards: CardsType | None = None,
-    ) -> None:
-        """Observe the outcome of a challenge. Optionally receive revealed cards."""
+    def observe_challenge(self, cards: tuple[str], player_count: int, challenge_amount_of_cards: int, current_rank: str, challenger_id: int, success: bool) -> None:
         pass
 
 
-class Bluff:
-    """Implemnentation of bluff game"""
-
-    CARDS_PER_PLAYER = 4  # Assume a 2-player setup
+class BluffController:
+    RANKS = "AJQK"
 
     def __init__(self):
         self._players = []
 
-    def _build_deck(self):
-        """sets up deck"""
-        return [Card(v, s) for s in VALID_SUITS for v in VALID_VALUES]
-
-    def _deal_cards(self):
-        """deals cards to agents and removes them from the hand"""
-        deck = self._build_deck()
-        random.shuffle(deck)
-
-        hands = []
-        for _ in self._players:
-            hand = deck[: self.CARDS_PER_PLAYER]
-            del deck[: self.CARDS_PER_PLAYER]
-            hands.append(hand)
-        return hands
-
-    def join(self, player: BluffPlayer) -> None:
-        """Lets a player join the game
-
-        Args:
-            player (BluffPlayer): self explanatory
-        """
+    def join(self,  player: BluffPlayer) -> None:
         if player not in self._players:
             self._players.append(player)
 
-    def play(self, debug: bool = False) -> list[int]:
-        """_summary_
+    def _shuffle_and_divide(self) -> tuple[list[list[str]], list[str]]:
+        deck = [card for card in self.RANKS for _ in range(4)]
+        random.shuffle(deck)
+        hands = [[] for _ in self._players]
+        number_of_cards_per_player = len(deck) // len(self._players)
+        for player in range(len(self._players)):
+            hands[player] = deck[:number_of_cards_per_player]
+            deck = deck[number_of_cards_per_player:]
+        return hands, deck
 
-        Args:
-            debug (bool, optional): _description_. Defaults to False.
+    def play(self, *, debug=False) -> int:
+        hands, pile = self._shuffle_and_divide()
+        current_rank = 0
+        current_player = 0
+        winner = None
+        last_action = []
+        while not winner:
+            if debug:
+                for player in range(len(self._players)):
+                    print("Player", player, "has hand", sorted(hands[player]))
+                print("Pile currently has", pile)
+                print("Current rank is", self.RANKS[current_rank])
+            if len(hands[current_player]) == 0:
+                winner = current_player
+                break
+            current_action = self._players[current_player].take_turn(tuple(hands[current_player]), len(self._players), len(last_action), self.RANKS[current_rank])
+            if current_action is None or len(current_action) == 0:
+                if len(last_action) == 0:
+                    # Player has performed an illegal action, next player wins the game
+                    if debug:
+                        print("Player", current_player, "performed an illegal challenge.")
+                    winner = (current_player + 1) % len(self._players)
+                    break
+                last_action_was_a_bluff = False
+                for card in last_action:
+                    if card != self.RANKS[current_rank]:
+                        last_action_was_a_bluff = True
+                if not last_action_was_a_bluff:
+                    if debug:
+                        print("Player", current_player, "challenged unsuccessfully and takes the entire pile.")
+                    hands[current_player].extend(pile)
+                    pile = []
+                else:
+                    challenged_player = (len(self._players) + current_player - 1) % len(self._players)
+                    if debug:
+                        print("Player", current_player, "challenged successfully; player", challenged_player, "takes the entire pile.")
+                    hands[challenged_player].extend(pile)
+                    pile = []
+                # Next round: next player, next rank
+                current_player = (current_player + 1) % len(self._players)
+                current_rank = (current_rank + 1) % len(self.RANKS)
+                last_action = []
+                for player in range(len(self._players)):
+                    self._players[player].observe_challenge(hands[player], len(self._players), len(last_action), current_rank, current_player, last_action_was_a_bluff)
+            else:
+                for card in current_action:
+                    if card in hands[current_player]:
+                        hands[current_player].remove(card)
+                        pile.append(card)
+                    else:
+                        if debug:
+                            print("Player", current_player, "cheated and takes the entire pile.")
+                        hands[current_player].extend(pile)
+                        pile = []
+                        current_action = []
+                        break
+                if debug:
+                    print("Player", current_player, "plays", current_action, "onto the pile.")
+                last_action = current_action
+                for player in range(len(self._players)):
+                    self._players[player].observe_bid(hands[player], len(self._players), len(last_action), current_rank, current_player)
+                current_player = (current_player + 1) % len(self._players)
+        if debug:
+            print("Player", current_player, "wins the game.")
+        return current_player
 
-        Returns:
-            list[int]: _description_
-        """
-        score = [0 for _ in self._players]
-        hands = self._deal_cards()
 
-        # Tell each player their hand
-        for pid, player in enumerate(self._players):
-            player.start_game(pid, len(self._players), hands[pid])
+class RandomBluffPlayer(BluffPlayer):
+    def take_turn(self, cards: tuple[str], player_count: int, previous_play: int, current_rank: str) -> list[str]|None:
+        if previous_play > 0 and random.random() < 0.3:
+            return None
+        return [random.choice(cards)]
 
-        # Now continue with bidding logic etc.
 
-        return score
 
-    def repeated_games(
-        self,
-        number_of_games: int,
-        *,
-        challenge_win_score: int = 1,
-        challenge_lose_score: int = 0,
-        bid_win_score: int = 1,
-        bid_lose_score: int = 0,
-    ):
-        """
-        Performs a series of games
-        :param number_of_games: number of games to perform
-        :return: total number of wins for each player across games
-        """
-        total_score = 0
-        return total_score
+controller = BluffController()
+controller.join(RandomBluffPlayer())
+controller.join(RandomBluffPlayer())
+controller.play(debug=True)
 
-        # Minimal implementation: return the indices of players who joined.
-        # This ensures the function always returns a list[int] as declared.
+
+
