@@ -1,16 +1,38 @@
 import random
 
+
 class BluffPlayer:
     def start_game(self, identifier: int, cards: tuple[str]):
         pass
 
-    def take_turn(self, cards: tuple[str], player_count: int, previous_play: int, current_rank: str) -> list[str]|None:
+    def take_turn(
+        self,
+        cards: tuple[str],
+        player_count: int,
+        previous_play: int,
+        current_rank: str,
+    ) -> list[str] | None:
         return None
 
-    def observe_bid(self, cards: tuple[str], player_count: int, challenge_amount_of_cards: int, current_rank: str, bidder_id: int) -> None:
+    def observe_bid(
+        self,
+        cards: tuple[str],
+        player_count: int,
+        challenge_amount_of_cards: int,
+        current_rank: str,
+        bidder_id: int,
+    ) -> None:
         pass
 
-    def observe_challenge(self, cards: tuple[str], player_count: int, challenge_amount_of_cards: int, current_rank: str, challenger_id: int, success: bool) -> None:
+    def observe_challenge(
+        self,
+        cards: tuple[str],
+        player_count: int,
+        challenge_amount_of_cards: int,
+        current_rank: str,
+        challenger_id: int,
+        success: bool,
+    ) -> None:
         pass
 
 
@@ -20,7 +42,7 @@ class BluffController:
     def __init__(self):
         self._players = []
 
-    def join(self,  player: BluffPlayer) -> None:
+    def join(self, player: BluffPlayer) -> None:
         if player not in self._players:
             self._players.append(player)
 
@@ -49,12 +71,19 @@ class BluffController:
             if len(hands[current_player]) == 0:
                 winner = current_player
                 break
-            current_action = self._players[current_player].take_turn(tuple(hands[current_player]), len(self._players), len(last_action), self.RANKS[current_rank])
+            current_action = self._players[current_player].take_turn(
+                tuple(hands[current_player]),
+                len(self._players),
+                len(last_action),
+                self.RANKS[current_rank],
+            )
             if current_action is None or len(current_action) == 0:
                 if len(last_action) == 0:
                     # Player has performed an illegal action, next player wins the game
                     if debug:
-                        print("Player", current_player, "performed an illegal challenge.")
+                        print(
+                            "Player", current_player, "performed an illegal challenge."
+                        )
                     winner = (current_player + 1) % len(self._players)
                     break
                 last_action_was_a_bluff = False
@@ -63,13 +92,25 @@ class BluffController:
                         last_action_was_a_bluff = True
                 if not last_action_was_a_bluff:
                     if debug:
-                        print("Player", current_player, "challenged unsuccessfully and takes the entire pile.")
+                        print(
+                            "Player",
+                            current_player,
+                            "challenged unsuccessfully and takes the entire pile.",
+                        )
                     hands[current_player].extend(pile)
                     pile = []
                 else:
-                    challenged_player = (len(self._players) + current_player - 1) % len(self._players)
+                    challenged_player = (len(self._players) + current_player - 1) % len(
+                        self._players
+                    )
                     if debug:
-                        print("Player", current_player, "challenged successfully; player", challenged_player, "takes the entire pile.")
+                        print(
+                            "Player",
+                            current_player,
+                            "challenged successfully; player",
+                            challenged_player,
+                            "takes the entire pile.",
+                        )
                     hands[challenged_player].extend(pile)
                     pile = []
                 # Next round: next player, next rank
@@ -77,7 +118,14 @@ class BluffController:
                 current_rank = (current_rank + 1) % len(self.RANKS)
                 last_action = []
                 for player in range(len(self._players)):
-                    self._players[player].observe_challenge(hands[player], len(self._players), len(last_action), current_rank, current_player, last_action_was_a_bluff)
+                    self._players[player].observe_challenge(
+                        hands[player],
+                        len(self._players),
+                        len(last_action),
+                        current_rank,
+                        current_player,
+                        last_action_was_a_bluff,
+                    )
             else:
                 for card in current_action:
                     if card in hands[current_player]:
@@ -85,34 +133,45 @@ class BluffController:
                         pile.append(card)
                     else:
                         if debug:
-                            print("Player", current_player, "cheated and takes the entire pile.")
+                            print(
+                                "Player",
+                                current_player,
+                                "cheated and takes the entire pile.",
+                            )
                         hands[current_player].extend(pile)
                         pile = []
                         current_action = []
                         break
                 if debug:
-                    print("Player", current_player, "plays", current_action, "onto the pile.")
+                    print(
+                        "Player",
+                        current_player,
+                        "plays",
+                        current_action,
+                        "onto the pile.",
+                    )
                 last_action = current_action
                 for player in range(len(self._players)):
-                    self._players[player].observe_bid(hands[player], len(self._players), len(last_action), current_rank, current_player)
+                    self._players[player].observe_bid(
+                        hands[player],
+                        len(self._players),
+                        len(last_action),
+                        current_rank,
+                        current_player,
+                    )
                 current_player = (current_player + 1) % len(self._players)
         if debug:
             print("Player", current_player, "wins the game.")
         return current_player
 
-
-class RandomBluffPlayer(BluffPlayer):
-    def take_turn(self, cards: tuple[str], player_count: int, previous_play: int, current_rank: str) -> list[str]|None:
-        if previous_play > 0 and random.random() < 0.3:
-            return None
-        return [random.choice(cards)]
-
-
-
-controller = BluffController()
-controller.join(RandomBluffPlayer())
-controller.join(RandomBluffPlayer())
-controller.play(debug=True)
-
-
-
+    def repeated_games(
+        self,
+        number_of_games: int,
+        *,
+        win_score: int = 1,
+    ) -> list[int]:
+        total_score = [0 for _ in range(len(self._players))]
+        for _ in range(number_of_games):
+            winner = self.play()  # your play() returns an int
+            total_score[winner] += win_score
+        return total_score

@@ -1,9 +1,10 @@
-from zeroorderplayer import ZeroOrderPlayer
+from bluff import BluffController
 from firstorderplayer import FirsOrderPlayer
-from bluff import Bluff
+from randomplayer import RandomBluffPlayer
+from zeroorderplayer import ZeroOrderPlayer
 
-game = Bluff()
-game.join(FirsOrderPlayer) # type: ignore
-game.join(ZeroOrderPlayer) # type: ignore
-game.play(debug=True)
-print(game.repeated_games(1000))
+controller = BluffController()
+controller.join(RandomBluffPlayer())
+controller.join(RandomBluffPlayer())
+controller.play(debug=True)
+print(controller.repeated_games(1000))
