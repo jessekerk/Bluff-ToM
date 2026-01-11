@@ -9,6 +9,6 @@ class RandomBluffPlayer(BluffPlayer):
         previous_play: int,
         current_rank: str,
     ) -> list[str] | None:
-        if previous_play > 0 and random.random() < 0.3:
+        if previous_play > 0 and random.random() < 0.3:     #30 percent chance to challenge. 
             return None
         return [random.choice(cards)]

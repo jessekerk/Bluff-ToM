@@ -1,4 +1,30 @@
+import itertools
 import random
+
+
+class BluffBid:
+    """
+    Represents a single bluff claim in the game:
+    a player claims that `count` cards of rank `rank`
+    were just played.
+    """
+
+    def __init__(self, count: int, rank: str, player_id: int):
+        self.count = count
+        self.rank = rank
+        self.player_id = player_id
+
+    def __str__(self) -> str:
+        return f"{self.count} x {self.rank} (by player {self.player_id})"
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, BluffBid):
+            return False
+        return (
+            self.count == other.count
+            and self.rank == other.rank
+            and self.player_id == other.player_id
+        )
 
 
 class BluffPlayer:
@@ -58,11 +84,15 @@ class BluffController:
 
     def play(self, *, debug=False) -> int:
         hands, pile = self._shuffle_and_divide()
+        for i, player in enumerate(self._players):
+            player.start_game(i, tuple(hands[i]))  # Start game signal
         current_rank = 0
         current_player = 0
         winner = None
         last_action = []
-        while not winner:
+        while (
+            winner is None
+        ):  # Changed from while not winner because 0 equals not winner and would throw bug.
             if debug:
                 for player in range(len(self._players)):
                     print("Player", player, "has hand", sorted(hands[player]))
@@ -114,7 +144,9 @@ class BluffController:
                     hands[challenged_player].extend(pile)
                     pile = []
                 # Next round: next player, next rank
-                current_player = (current_player + 1) % len(self._players)
+                current_player = (current_player + 1) % len(
+                    self._players
+                )  # chatgpt says there is a bug here
                 current_rank = (current_rank + 1) % len(self.RANKS)
                 last_action = []
                 for player in range(len(self._players)):
@@ -125,7 +157,7 @@ class BluffController:
                         current_rank,
                         current_player,
                         last_action_was_a_bluff,
-                    )
+                    )  # till here
             else:
                 for card in current_action:
                     if card in hands[current_player]:
@@ -151,14 +183,16 @@ class BluffController:
                         "onto the pile.",
                     )
                 last_action = current_action
-                for player in range(len(self._players)):
+                for player in range(
+                    len(self._players)
+                ):  # Chatgpt says theres an error from here
                     self._players[player].observe_bid(
                         hands[player],
                         len(self._players),
                         len(last_action),
                         current_rank,
                         current_player,
-                    )
+                    )  # Till here
                 current_player = (current_player + 1) % len(self._players)
         if debug:
             print("Player", current_player, "wins the game.")
@@ -175,3 +209,20 @@ class BluffController:
             winner = self.play()  # your play() returns an int
             total_score[winner] += win_score
         return total_score
+
+
+def get_valid_bluff_plays(hand: tuple[str], previous_play: int) -> list[list[str]]:
+    """
+    Returns all legal card plays (not challenges) from this hand.
+    Does NOT include the challenge action.
+    """
+    if len(hand) == 0:
+        return []
+    valid = []
+    # You may play between 1 and 4 cards, as it is illogical to play more than 4 cards as there are only 4 cards of each rank
+    # IMPORTANT: This is an assumption, I should mention this in the report.
+    max_play = 4
+    for k in range(1, max_play + 1):
+        for combo in itertools.combinations(hand, k):
+            valid.append(list(combo))
+    return valid
