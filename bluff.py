@@ -7,6 +7,7 @@ class BluffBid:
     Represents a single bluff claim in the game:
     a player claims that `count` cards of rank `rank`
     were just played.
+    'BluffPlay' would have been a more appropriate name, but would have lead to confusion with the class 'BluffPlayer'.
     """
 
     def __init__(self, count: int, rank: str, player_id: int):
@@ -29,14 +30,15 @@ class BluffBid:
 
 class BluffPlayer:
     def start_game(self, identifier: int, cards: tuple[str]):
-        pass
+        self.identifier = identifier
+        self.played_by_me = {r: 0 for r in "AJQK"}  #For explicit memory
 
     def take_turn(
         self,
         cards: tuple[str],
         player_count: int,
-        previous_play: int,
         current_rank: str,
+        current_bid: BluffBid
     ) -> list[str] | None:
         return None
 
@@ -64,7 +66,6 @@ class BluffPlayer:
 
 class BluffController:
     RANKS = "AJQK"
-
     def __init__(self):
         self._players = []
 
@@ -211,7 +212,7 @@ class BluffController:
         return total_score
 
 
-def get_valid_bluff_plays(hand: tuple[str], previous_play: int) -> list[list[str]]:
+def get_valid_bluff_plays(hand: tuple[str], current_bid: BluffBid) -> list[list[str]]:  #current_bid is currently a dead parameter, since this fucntion only looks at the agent's own hand, but it could be used in the future.
     """
     Returns all legal card plays (not challenges) from this hand.
     Does NOT include the challenge action.

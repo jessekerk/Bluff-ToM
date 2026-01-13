@@ -5,6 +5,6 @@ from zeroorderplayer import ZeroOrderPlayer
 
 controller = BluffController()
 controller.join(RandomBluffPlayer())
-controller.join(RandomBluffPlayer())
-controller.play(debug=True)
+controller.join(ZeroOrderPlayer())
+controller.play(debug=False)
 print(controller.repeated_games(1000))
