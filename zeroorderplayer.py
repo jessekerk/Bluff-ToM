@@ -1,13 +1,7 @@
-from bluff import BluffBid, BluffPlayer, get_valid_bluff_plays
+from bluff import BluffBid, BluffPlayer
 from math import comb
-    
-import random
+
 class ZeroOrderPlayer(BluffPlayer):
-    def _probabilities(self, player_count: int, j: int) -> float:
-        "Helper function that does math for probabilities."
-        return 0.0
-
-
 
     def calculate_challenge_probability(
         self, cards: tuple[str], player_count: int, current_rank: str, current_bid: BluffBid) -> float:
@@ -38,116 +32,21 @@ class ZeroOrderPlayer(BluffPlayer):
         return 1.0 - p_truth
 
 
-
-    RANKS = "AJQK"
-
-    def calculate_play_probability(
-        self,
-        cards: tuple[str],
-        player_count: int,
-        current_rank: str,
-        play: list[str],
-        current_bid: BluffBid
-    ) -> float:
-        """
-        Returns a score ~ probability opponent won't challenge.
-        ToM0: crude deck-based plausibility + small preference to shed cards truthfully.
-        Assumes 2-player, 16-card game.
-        """
-        if current_bid is None:
-            return 1.0  #always play on the first round
-        else:
-            if self.calculate_challenge_probability(cards, player_count, current_rank, current_bid) >= 0.80:
-                return 0.0  #Challenge
-            else:
-                return 1.0  #Play
-        
-        
-        valid_plays = get_valid_bluff_plays(cards, current_bid) #current bid is not used in this function
-        # Deterministic choice to bluff whether or not (compare it against a value)
-        
-        if ...:
-            pass
-            #we will bluff
-        
-        if ...:
-            #we will play truthfully
-            if current_bid is None:
-                rank_cards = [c for c in cards if c == current_rank]
-                k = random.randint(1, len(rank_cards))
-                return random.sample(rank_cards, k) #This plays a random amount of cards of rank R. 
-        
-        else: 
-            #If a tom0 agent is asked to play a card of rank r which it has, it plays that card (Play one card)
-            my_count = cards.count(current_rank)    #amount of cards of rank R
-        
-        
-
-    def observe_challenge(self, *args): # type: ignore
-        self.played_by_me = {r:0 for r in "AJQK"}
-    
-    
-    
-
     def take_turn(self, cards: tuple[str], player_count: int, current_rank: str, current_bid: BluffBid) -> list[str] | None:
-            # Defensive fix: convert rank index to rank character
-        if isinstance(current_rank, int):
-            current_rank = "AJQK"[current_rank]
-        
         if current_bid is not None:    
             if self.calculate_challenge_probability(cards, player_count, current_rank, current_bid) >= 0.80:    #designer choice (need to explain)
                 return None     #challenge if high chance to win
-    
-        #Play
-        #valid_plays = get_valid_bluff_plays(cards, current_bid)
-
-        #truthful_plays = [p for p in valid_plays if all(c == current_rank for c in p)]
-        #bluff_plays    = [p for p in valid_plays if not all(c == current_rank for c in p)]
-
-        truth_cards = [p for p in cards if all(c == current_rank for c in p)] #PROBEER 1 KAART TE PAKKEN VOOR SIMPLICITY (Harmen)
+            
+        truth_cards = [p for p in cards if all(c == current_rank for c in p)] #PROBEER 1 KAART TE PAKKEN VOOR SIMPLICITY
         bluff_cards = [p for p in cards if all(c != current_rank for c in p)]
         
         
-        want_to_bluff = cards.count(current_rank) < 3            #deterministic choice if you have less than 3 of rank r, bluff #*Describe in report
-        want_to_play_truthfully = cards.count(current_rank) > 2 #deterministic choice if you have more than 2 of rank r, truth
-        
-        
+        want_to_bluff = cards.count(current_rank) < 3         
         
         if (want_to_bluff and bluff_cards) or not truth_cards:
             return bluff_cards
         else:
             return truth_cards
-   
-   
-    #       # if bluff is not possible fall back
-    #       return random.choice(valid_plays)
-
-    #   if want_to_play_truthfully:
-    #       if truthful_plays:
-    #           return random.choice(truthful_plays)
-    #       # can't play truthful if you don't have the rank; fall back to bluff:
-    #       if bluff_plays:
-    #           return random.choice(bluff_plays)
-    #       return random.choice(valid_plays)
-#
-     #   #Calculate play probability
-     #   best_play = None
-     #   best_play_probability = -1.0
-     #   
-     #   for play_option in valid_plays:
-     #       p = self.calculate_play_probability(
-     #           cards, player_count, current_rank, play_option, current_bid
-     #       )
-     #       if p > best_play_probability:
-     #           best_play_probability = p
-     #           best_play = play_option
-     #   
-     #   #Choose action
-     #   if current_bid is not None and p_challenge >= best_play_probability:
-     #       return None #challenge
-     #   else:
-     #       if best_play is not None:1
-     #       return best_play    #play the cards w/ the highest win probability
 
         
 
