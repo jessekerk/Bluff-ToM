@@ -1,6 +1,6 @@
 from bluff import BluffPlayer
 
-class FirsOrderPlayer(BluffPlayer):
+class FirstOrderPlayer(BluffPlayer):
     pass
 
 #NOTE: Copy code / style from assignment 2 

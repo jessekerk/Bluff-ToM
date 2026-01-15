@@ -90,7 +90,8 @@ class BluffController:
         current_rank = 0
         current_player = 0
         winner = None
-        last_action = []
+        last_action: list[str] = []
+        last_bid: BluffBid | None = None   # <-- initialize here
         while (
             winner is None
         ):  # Changed from while not winner because 0 equals not winner and would throw bug.
@@ -105,8 +106,8 @@ class BluffController:
             current_action = self._players[current_player].take_turn(
                 tuple(hands[current_player]),
                 len(self._players),
-                len(last_action),
                 self.RANKS[current_rank],
+                last_bid
             )
             if current_action is None or len(current_action) == 0:
                 if len(last_action) == 0:
@@ -149,6 +150,7 @@ class BluffController:
                     self._players
                 )  # chatgpt says there is a bug here
                 current_rank = (current_rank + 1) % len(self.RANKS)
+                last_bid = None
                 last_action = []
                 for player in range(len(self._players)):
                     self._players[player].observe_challenge(
@@ -184,6 +186,7 @@ class BluffController:
                         "onto the pile.",
                     )
                 last_action = current_action
+                last_bid = BluffBid(len(last_action), self.RANKS[current_rank], current_player)
                 for player in range(
                     len(self._players)
                 ):  # Chatgpt says theres an error from here
@@ -212,18 +215,19 @@ class BluffController:
         return total_score
 
 
-def get_valid_bluff_plays(hand: tuple[str], current_bid: BluffBid) -> list[list[str]]:  #current_bid is currently a dead parameter, since this fucntion only looks at the agent's own hand, but it could be used in the future.
+def get_valid_bluff_plays(cards: tuple[str], current_bid: BluffBid) -> list[list[str]]:  #current_bid is currently a dead parameter, since this fucntion only looks at the agent's own hand, but it could be used in the future.
     """
     Returns all legal card plays (not challenges) from this hand.
     Does NOT include the challenge action.
     """
-    if len(hand) == 0:
+    if len(cards) == 0:
         return []
     valid = []
     # You may play between 1 and 4 cards, as it is illogical to play more than 4 cards as there are only 4 cards of each rank
     # IMPORTANT: This is an assumption, I should mention this in the report.
+    # What if the agent only holds 1, 2, or 3 cards? does the function still work then? 
     max_play = 4
     for k in range(1, max_play + 1):
-        for combo in itertools.combinations(hand, k):
+        for combo in itertools.combinations(cards, k):
             valid.append(list(combo))
     return valid
