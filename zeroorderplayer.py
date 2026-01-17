@@ -34,12 +34,11 @@ class ZeroOrderPlayer(BluffPlayer):
 
     def take_turn(self, cards: tuple[str], player_count: int, current_rank: str, current_bid: BluffBid) -> list[str] | None:
         if current_bid is not None:    
-            if self.calculate_challenge_probability(cards, player_count, current_rank, current_bid) >= 0.80:    #designer choice (need to explain)
+            if self.calculate_challenge_probability(cards, player_count, current_rank, current_bid) >= 0.75:    #designer choice (need to explain)
                 return None     #challenge if high chance to win
             
         truth_cards = [p for p in cards if all(c == current_rank for c in p)] #PROBEER 1 KAART TE PAKKEN VOOR SIMPLICITY
         bluff_cards = [p for p in cards if all(c != current_rank for c in p)]
-        
         
         want_to_bluff = cards.count(current_rank) < 3         
         
