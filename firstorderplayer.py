@@ -21,23 +21,17 @@ class FirstOrderPlayer(BluffPlayer):
         self.beliefs = {}   #Set that represents ToM1 agent's initial beliefs
         self.my_cards = cards
         self.player_count = 2
-        self.pile_size = 0  #change this later
+        self.pile_size = 0 
         self.identifier = identifier #so we know we're the challenger later
+        self.strategy = True    #to play as tom1 agent
+        
         
         deck: list[str] = list(FULL_DECK)
         for c in cards:
             deck.remove(c)
             
-        self.opp_cards = tuple(deck) #Update dit door het aantal kaarten wat hij heeft gebluft willekeurig weg te nemen.
-        self.previous_bid = None #dit moet wel, telkens wanneer er je zelf een bid doet, wordt dit geupdated, wat nodig is voor tom0_will_bluff in ev_challenge.
-        
-        #This should calculate the # of cards in the opp hand, at the start of every round. This could get updated and calculated from 16 - len(pile) - len(self.my_cards)             
-        
-        #Multinomial prior over opponent hand
-        # for ... in ... 
-
-
-        #difficult math here that updates initial beliefs, based on perhaps pile size 
+        self.opp_cards: tuple[str, ...] = tuple(deck) #Update dit door het aantal kaarten wat hij heeft gebluft willekeurig weg te nemen.    #dit moet nog gefixt worden.
+        self.previous_bid = None 
         
     def _remove_specific(self, pool: list[str], rank: str, n: int) -> None:
         """Remove up to n copies of rank from pool (in-place)."""
@@ -64,7 +58,7 @@ class FirstOrderPlayer(BluffPlayer):
         current_rank: str,
         bidder_id: int,
         current_bid: BluffBid | None,
-    ) -> None:  # type: ignore
+    ) -> None:  
         """
         Observe that someone made a bid.
 
@@ -80,10 +74,8 @@ class FirstOrderPlayer(BluffPlayer):
         self.pile_size += current_bid.count
 
         # Track the most recent bid
-        self.previous_bid = current_bid
+        #self.previous_bid = current_bid
 
-        
-        
         
     
     def observe_challenge(self, cards: tuple[str], player_count: int, challenge_amount_of_cards: int, current_rank: str, challenger_id: int, success: bool) -> None:
@@ -96,8 +88,15 @@ class FirstOrderPlayer(BluffPlayer):
         deck: list[str] = list(FULL_DECK)
         for c in cards:
             deck.remove(c)
-        self.opp_cards = tuple(deck)
-            
+        self.opp_cards = deck    #Once again give the opponents the cards if they are not in your hand. 
+        
+        if self.identifier == challenger_id and not success:
+           self.strategy = not self.strategy
+           
+            #verander strategie
+        
+        #als mijn challenge niet succesvol was, verander de strategie en vice versa. 
+
         
     
     #Predictive Theory of Mind
@@ -105,6 +104,7 @@ class FirstOrderPlayer(BluffPlayer):
         if ZeroOrderPlayer().tom0_would_bluff(opponent_cards, current_rank, my_previou_bid):   #if tomo would bluff, assign a high value to challenging the play. 
             return self.pile_size  #EV_challenge = pile_size if challenging is succesful to the ToM1 agent, because ToM0 picks up the pile
         return -self.pile_size  #If ToM0 has truthed, assign a low value for challenging. 
+
 
 
     def calculate_ev_play(self, cards: tuple[str], player_count: int, current_rank: str, my_next_bid: BluffBid, i_will_bluff: bool) -> float:
@@ -119,24 +119,59 @@ class FirstOrderPlayer(BluffPlayer):
 
     #Final decision
     def take_turn(self, cards: tuple[str], player_count: int, current_rank: str, current_bid: BluffBid) -> list[str] | None:
-        bluff_cards = [p for p in cards if p != current_rank]
-        truth_cards = [p for p in cards if p == current_rank]
-        number_bluff_cards = len(bluff_cards)
-        number_truth_cards = len(truth_cards)
+        #If playing as Tom1 agent
+        #if self.strategy is True:   
+            print("playing as tom1")
+            bluff_cards = [p for p in cards if p != current_rank]
+            truth_cards = [p for p in cards if p == current_rank]
+            number_bluff_cards = len(bluff_cards)
+            number_truth_cards = len(truth_cards)
+            
+            choice = {}
+            for bid_number in range(1, number_bluff_cards + 1):
+                choice[(True, bid_number)] = self.calculate_ev_play(self.opp_cards, player_count, current_rank, BluffBid(bid_number, current_rank, 0), True) 
+            for bid_number in range(1, number_truth_cards + 1):
+                choice[(False, bid_number)] = self.calculate_ev_play(self.opp_cards, player_count, current_rank, BluffBid(bid_number, current_rank, 0), False) 
+
+            
+            best_action = max(choice, key=choice.get)
+            
+            ev_chal = self.calculate_ev_challenge(self.opp_cards, current_rank, self.previous_bid)
+            
+            if ev_chal >= choice[best_action]:
+                self.previous_bid = None 
+                return None
+            else:
+                self.previous_bid = BluffBid(best_action[1], current_rank, 0)
+                if best_action[0]:  #bluff
+                    return random.sample(bluff_cards, best_action[1])
+                else:
+                    return random.sample(truth_cards, best_action[1])
         
-        choice = {}
-        for bid_number in range(1, number_bluff_cards):
-            choice[(True, bid_number)] = self.calculate_ev_play(self.opp_cards, player_count, current_rank, BluffBid(bid_number, current_rank, 0), True) 
-        for bid_number in range(1, number_truth_cards):
-            choice[(False, bid_number)] = self.calculate_ev_play(self.opp_cards, player_count, current_rank, BluffBid(bid_number, current_rank, 0), False) 
-        #make algorithm that takes max and compare that with challenging.
+        #If playing as ToM0 agent
+        #if self.strategy is not True:
+        #    if current_bid is not None:    
+        #        if ZeroOrderPlayer().calculate_challenge_probability(cards, player_count, current_rank, current_bid) >= 0.75:    #designer choice (need to explain)
+        #            return None     #challenge if high chance to win
+        #        
+        #    truth_cards = [p for p in cards if all(c == current_rank for c in p)] #PROBEER 1 KAART TE PAKKEN VOOR SIMPLICITY
+        #    bluff_cards = [p for p in cards if all(c != current_rank for c in p)]
+        #    
+        #    want_to_bluff = cards.count(current_rank) < 3      #I don't know if adding 'self' here so the tom1 agent can access it will break the code       
+        #    
+        #    if (want_to_bluff and bluff_cards) or not truth_cards:
+        #        return bluff_cards
+        #    else:
+        #        return truth_cards
+
+
         
 
-
-
-#NOTE: Copy code / style from assignment 2 
-# A ToM0 player wants to bluff only if he has fewer than 2 cards of the asked rank; use this information along with the pile checkign for a first order agent
-# Then the implementation should be rather straightforward. 
+#Om de tom1 naar een tom0 te zetten, wanneer de tom1 zeker weet dat de opponent gaat bluffen, maar er is niet gebluft, is zijn opponent een randomplayer
+#In andere woorden, wanneer de tom1's challenge onsuccesvol is
 
 
 # TODO: Make ToM1 agent act like ToM0 if suspicion of opponent being random... 
+#To do that.. 
+#If challenging results in a failure as a ToM1 agent, change strat. 
+#Use the private functions to update beliefs of opponent's hand. 

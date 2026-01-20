@@ -49,6 +49,7 @@ class BluffPlayer:
         challenge_amount_of_cards: int,
         current_rank: str,
         bidder_id: int,
+        current_bid
     ) -> None:
         pass
 
@@ -196,6 +197,7 @@ class BluffController:
                         len(last_action),
                         current_rank,
                         current_player,
+                        last_bid    #This is a change, I, Jesse added. It might be a mistake. 
                     )  # Till here
                 current_player = (current_player + 1) % len(self._players)
         if debug:

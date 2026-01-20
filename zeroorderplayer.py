@@ -20,7 +20,7 @@ class ZeroOrderPlayer(BluffPlayer):
 
         # If bid claims more rank-r cards than ToM0 could truthfully play,
         # then it must be a bluff
-        if bid.count > r_count: #Should he not challenge here? 
+        if bid is not None and bid.count > r_count: #Should he not challenge here? 
             return True
 
         # Otherwise, follow ToM0 policy
@@ -67,8 +67,8 @@ class ZeroOrderPlayer(BluffPlayer):
         want_to_bluff = cards.count(current_rank) < 3      #I don't know if adding 'self' here so the tom1 agent can access it will break the code       
         
         if (want_to_bluff and bluff_cards) or not truth_cards:
-            return bluff_cards[:1]
+            return bluff_cards
         else:
-            return truth_cards[:1]
+            return truth_cards
 
         
