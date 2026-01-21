@@ -82,8 +82,43 @@ class FirstOrderPlayer(BluffPlayer):
         self.opp_cards = tuple(deck)
         
         if self.identifier == challenger_id and not success:
-            self.strategy = not self.strategy   #flip to ToM0 player
+            pass
+            #self.strategy = not self.strategy   #flip to ToM0 player
     
+    def tom1_would_bluff(
+    self,
+    my_cards: tuple[str, ...],
+    player_count: int,
+    current_rank: str,
+    proposed_bid: BluffBid,
+) -> bool:
+        k = proposed_bid.count
+        r_count = my_cards.count(current_rank)
+
+        # If I cannot truthfully play k cards, it must be a bluff
+        if k > r_count:
+            return True
+
+        ev_truth = self.calculate_ev_play(
+            my_cards,
+            player_count,
+            current_rank,
+            proposed_bid,
+            i_will_bluff=False,
+        )
+
+        ev_bluff = self.calculate_ev_play(
+            my_cards,
+            player_count,
+            current_rank,
+            proposed_bid,
+            i_will_bluff=True,
+        )
+
+        return ev_bluff >= ev_truth
+
+    
+
     
     #Predictive Theory of Mind
     def calculate_ev_challenge(self, opponent_cards: tuple[str, ...], current_rank: str, opponent_last_bid: BluffBid) -> float:
